@@ -255,10 +255,22 @@
     (models/update-chat chat cofx)))
 
 (handlers/register-handler-fx
-  :remove-chat
+  :leave-chat-and-navigate-home
   [re-frame/trim-v]
   (fn [cofx [chat-id]]
-    (models/remove-chat chat-id cofx)))
+    (handlers/merge-fx cofx
+                       (models/remove-chat chat-id)
+                       (navigation/replace-view :home)
+                       (remove-transport chat-id))))
+
+(handlers/register-handler-fx
+  :leave-group-chat?
+  [re-frame/trim-v]
+  (fn [_ [chat-id]]
+    {:show-confirmation {:title               (i18n/label :t/leave-confirmation)
+                         :content             (i18n/label :t/leave-group-chat-confirmation)
+                         :confirm-button-text (i18n/label :t/leave)
+                         :on-accept           #(re-frame/dispatch [:leave-chat-and-navigate-home chat-id])}}))
 
 (handlers/register-handler-fx
   :remove-chat-and-navigate-home
@@ -326,14 +338,6 @@
                        (models/remove-chat current-chat-id)
                        (navigation/replace-view :home)
                        (broadcast-leave (get chats current-chat-id)))))
-
-(handlers/register-handler-fx
-  :leave-group-chat?
-  (fn [_ _]
-    {:show-confirmation {:title               (i18n/label :t/leave-confirmation)
-                         :content             (i18n/label :t/leave-group-chat-confirmation)
-                         :confirm-button-text (i18n/label :t/leave)
-                         :on-accept           #(re-frame/dispatch [:leave-group-chat])}}))
 
 (handlers/register-handler-fx
   :show-profile
