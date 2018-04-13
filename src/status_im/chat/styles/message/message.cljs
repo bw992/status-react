@@ -49,12 +49,12 @@
             :align-items    align})))
 
 (def message-timestamp
-  {:margin-left 5
-   :margin-right 5
-   :margin-bottom -2
-   :color colors/gray
-   :opacity 0.5
-   :align-self :flex-end})
+  {:margin-left     5
+   :margin-right    5
+   :margin-bottom   -2
+   :color           colors/gray
+   :opacity         0.5
+   :align-self      :flex-end})
 
 (def selected-message
   {:margin-top  18

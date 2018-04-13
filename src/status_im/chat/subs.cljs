@@ -100,22 +100,22 @@
 
   so we bucket both in 1999-12-31"
   [{:keys [acc last-timestamp last-datemark]} {:keys [timestamp datemark] :as msg}]
-  (cond (empty? acc)                                       ; initial element
+  (cond (empty? acc)                                     ; initial element
         {:last-timestamp timestamp
-         :last-datemark datemark
-         :acc  (conj acc msg)}
+         :last-datemark  datemark
+         :acc            (conj acc msg)}
 
-        (and (not= last-datemark datemark)                 ; not the same day
-               (< timestamp last-timestamp))               ; not out-of-order
+        (and (not= last-datemark datemark)               ; not the same day
+             (< timestamp last-timestamp))               ; not out-of-order
         {:last-timestamp timestamp
-         :last-datemark datemark
-         :acc  (conj acc {:value last-datemark            ; intersperse datemark message
-                          :type  :datemark}
-                          msg)}
-      :else
-      {:last-timestamp (max timestamp last-timestamp)      ; use last datemark
-       :last-datemark last-datemark
-       :acc (conj acc (assoc msg :datemark last-datemark))}))
+         :last-datemark  datemark
+         :acc            (conj acc {:value last-datemark ; intersperse datemark message
+                                    :type  :datemark}
+                               msg)}
+        :else
+        {:last-timestamp (max timestamp last-timestamp)  ; use last datemark
+         :last-datemark  last-datemark
+         :acc            (conj acc (assoc msg :datemark last-datemark))}))
 
 (defn sort-messages
   "Remove hidden messages and sort by clock-value desc, breaking ties by message id"
@@ -168,9 +168,12 @@
                                         :same-direction? same-direction?
                                         :last-in-group? last-in-group?
                                         :last-outgoing? last-outgoing?)]
-    {:stream (cond-> stream
-               previous-first-in-group? set-previous-message-first-in-group                     ; update previuous message if necessary
-               :always                  (conj new-message))                                     ; always add the message
+    {:stream             (cond-> stream
+                           previous-first-in-group?
+                           set-previous-message-first-in-group                                  ; update previuous message if necessary
+
+                           :always
+                           (conj new-message))                                                  ; always add the message
      :last-outgoing-seen (or last-outgoing-seen last-outgoing?)}))                              ; mark the last message sent by the user
 
 (defn messages-stream
@@ -185,8 +188,9 @@
                                        :last? true
                                        :last-outgoing? (:outgoing initial-message))]
       (->> (rest ordered-messages)
-           (reduce add-positional-metadata {:stream [message-with-metadata]
-                                            :last-outgoing-seen (:last-outgoing? message-with-metadata)})
+           (reduce add-positional-metadata
+                   {:stream             [message-with-metadata]
+                    :last-outgoing-seen (:last-outgoing? message-with-metadata)})
            :stream))))
 
 (reg-sub
