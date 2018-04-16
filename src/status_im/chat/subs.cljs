@@ -136,45 +136,54 @@
   the same. Ignore messages with out-of-order timestamps"
   [messages]
   (when (seq messages)
-    (let [messages-with-datemarks (->> (transduce (comp
-                                                    (map add-datemark)
-                                                    (map add-timestamp))
-                                                  (completing intersperse-datemark)
-                                                  {:acc []}
-                                                  messages)
-                                       :acc)]
-      (conj messages-with-datemarks {:value (:datemark (peek messages-with-datemarks)) ; Append last datemark
+    (let [messages-with-datemarks (transduce (comp
+                                               (map add-datemark)
+                                               (map add-timestamp))
+                                             (completing intersperse-datemark :acc)
+                                             {:acc []}
+                                             messages)]
+      ; Append last datemark
+      (conj messages-with-datemarks {:value (:datemark (peek messages-with-datemarks))
                                      :type  :datemark}))))
 
 (defn- set-previous-message-first-in-group [stream]
   (conj (pop stream) (assoc (peek stream) :first-in-group? true)))
 
-(def ^:private group-ms 60000) ; any message that comes after this amount of ms will be grouped separately
+; any message that comes after this amount of ms will be grouped separately
+(def ^:private group-ms 60000)
 
 (defn add-positional-metadata
-  "Reduce step which adds positional metadata to a message and conditionally update
-  the previous message with :first-in-group?."
-  [{:keys [stream last-outgoing-seen]} {:keys [type from datemark outgoing timestamp] :as message}]
+  "Reduce step which adds positional metadata to a message and conditionally
+  update the previous message with :first-in-group?."
+  [{:keys [stream last-outgoing-seen]}
+   {:keys [type from datemark outgoing timestamp] :as message}]
   (let [previous-message         (peek stream)
-        last-in-group?           (or (not= from (:from previous-message))                       ; Is the previous message was from a different author
-                                     (> (- (:timestamp previous-message) timestamp) group-ms))  ; or this message comes after x ms
+        ; Was the previous message from a different author or this message
+        ; comes after x ms
+        last-in-group?           (or (not= from (:from previous-message))
+                                     (> (- (:timestamp previous-message) timestamp) group-ms))
         same-direction?          (= outgoing (:outgoing previous-message))
-        last-outgoing?           (and (not last-outgoing-seen)                                  ; Have we seen an outgoing message already?
+        ; Have we seen an outgoing message already?
+        last-outgoing?           (and (not last-outgoing-seen)
                                       outgoing)
         datemark?                (= :datemark (:type message))
-        previous-first-in-group? (or datemark?                                                  ; If this is a datemark, the previous message was the first in a group
-                                     last-in-group?)                                            ; if this is the last-message of a group, then the previous message was the first
+        ; If this is a datemark or this is the last-message of a group,
+        ; then the previous message was the first
+        previous-first-in-group? (or datemark?
+                                     last-in-group?)
         new-message              (assoc message
                                         :same-direction? same-direction?
                                         :last-in-group? last-in-group?
                                         :last-outgoing? last-outgoing?)]
     {:stream             (cond-> stream
                            previous-first-in-group?
-                           set-previous-message-first-in-group                                  ; update previuous message if necessary
+                           ; update previuous message if necessary
+                           set-previous-message-first-in-group
 
                            :always
-                           (conj new-message))                                                  ; always add the message
-     :last-outgoing-seen (or last-outgoing-seen last-outgoing?)}))                              ; mark the last message sent by the user
+                           (conj new-message))
+     ; mark the last message sent by the user
+     :last-outgoing-seen (or last-outgoing-seen last-outgoing?)}))
 
 (defn messages-stream
   "Enhances the messages in message sequence interspersed with datemarks
